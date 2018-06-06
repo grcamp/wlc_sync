@@ -486,6 +486,21 @@ def split_string(the_list, sub_string, delimiter, string_index):
         returnVal = returnVal.strip()
     return returnVal
 
+def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
+    # Create list of commands to run
+    commandList = []
+
+    # Search through each
+    for group in sourceFlexGroups:
+        # Check if group exists in destination
+        for dGroup in destinationFlexGroups:
+            if group['name'] == dGroup['name']:
+                for ap in group['ap_macs']:
+                    if any(ap == s for s in dGroup['ap_macs']) == False:
+                        commandList.append("flexconnect group {} ap add {}".format(group['name'], ap))
+
+    # Return commandList
+    return commandList
 
 def main(**kwargs):
     '''
@@ -520,6 +535,12 @@ def main(**kwargs):
     sourceWLC = CiscoWLC(args.sourceWLCip.strip(), args.username, args.password)
 
     sourceWLC.discover_device()
+
+    destinationWLC = CiscoWLC(args.destinationWLCip.strip(), args.username, args.password)
+
+    destinationWLC.discover_device()
+
+    commandList = find_ap_changes(sourceWLC.flexconnectGroups, destinationWLC.flexconnectGroups)
 
     return None
 
