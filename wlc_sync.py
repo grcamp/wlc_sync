@@ -521,6 +521,8 @@ def main(**kwargs):
 
     sourceWLC.discover_device()
 
+    return None
+
 
 
 
