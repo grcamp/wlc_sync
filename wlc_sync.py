@@ -505,7 +505,7 @@ def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
         for sGroup in sourceFlexGroups:
             if group['name'] == sGroup['name']:
                 for ap in group['ap_macs']:
-                    if any(ap == s for s in dGroup['ap_macs']) == False:
+                    if any(ap == s for s in sGroup['ap_macs']) == False:
                         commandList.append("config flexconnect group {} ap delete {}".format(group['name'], ap))
 
     # Return commandList
