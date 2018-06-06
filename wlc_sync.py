@@ -112,7 +112,7 @@ class CiscoWLC:
         self.runConfigCommands = ""
         self.flexconnectGroups = []
 
-    def _wait_for_prompt(self, remote_conn, myLogFile, prompt="#", timeout=10):
+    def _wait_for_prompt(self, remote_conn, myLogFile, prompt=">", timeout=10):
         '''
 
         :param remote_conn:
@@ -154,15 +154,10 @@ class CiscoWLC:
         # Return None
         return allOutput
     
-    # Method discover_device
-    #
-    # Input: None
-    # Output: None
-    # Parameters: None
-    #
-    # Return Value: -1 on error, 0 for successful discovery
-    #####################################################################
     def discover_device(self):
+        '''
+        :return:
+        '''
         # Check if IP address string is empty
         if self.ipAddress == "":
             # Return error
@@ -422,6 +417,10 @@ class CiscoWLC:
         return None
 
     def _build_flexconnect_group_list(self):
+        '''
+
+        :return:
+        '''
         # Declare variables
         lines = self.runConfigCommands.split('\n')
 
@@ -438,15 +437,136 @@ class CiscoWLC:
         # Return None
         return None
 
-    # Method to_string
-    #
-    # Input: None
-    # Output: None
-    # Parameters: None
-    #
-    # Return Value: None
-    #####################################################################
+    def run_commands(self, commmands, saveConfig=False):
+        '''
+
+        :param commmands:
+        :return:
+        '''
+        # Check if IP address string is empty
+        if self.ipAddress == "":
+            # Return error
+            return -1
+
+        # Open Log File
+        myLogFile = open(self.ipAddress + logFilePostfix, 'a')
+        # Attempt to login to devices via SSH
+        try:
+            # Attempt Login
+            remote_conn_pre = paramiko.SSHClient()
+            # Bypass SSH Key accept policy
+            remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            # Attempt to connection
+            remote_conn_pre.connect(self.ipAddress, username=self.username, password=self.password, look_for_keys=False,
+                                    allow_agent=False)
+            # Log into WLC
+            remote_conn = remote_conn_pre.invoke_shell()
+            time.sleep(15)
+            myOutput = remote_conn.recv(65535)
+            myLogFile.write(myOutput)
+
+            # Check if user prompt appears
+            if "User:" not in myOutput:
+                myLogFile.close()
+                remote_conn.close()
+                return -1
+
+            remote_conn.send(self.username)
+            remote_conn.send("\n")
+            time.sleep(1)
+            myOutput = remote_conn.recv(65535)
+            myLogFile.write(myOutput)
+            myLogFile.flush()
+            remote_conn.send(self.password)
+            remote_conn.send("\n")
+            time.sleep(15)
+            myOutput = remote_conn.recv(65535)
+            myLogFile.write(myOutput)
+            myLogFile.flush()
+
+            # Check if user prompt appears
+            if ">" not in myOutput:
+                myLogFile.close()
+                remote_conn.close()
+                return -2
+
+            # Disable paging
+            remote_conn.send("config paging disable")
+            remote_conn.send("\n")
+            myOutput = self._wait_for_prompt(remote_conn, myLogFile)
+
+            # Run each command
+            for command in commands:
+                remote_conn.send(command)
+                remote_conn.send("\n")
+                myOutput = self._wait_for_prompt(remote_conn, myLogFile)
+
+            # Enable config paging
+            remote_conn.send("config paging enable")
+            remote_conn.send("\n")
+            myOutput = self._wait_for_prompt(remote_conn, myLogFile)
+
+            # Check if config should be saved
+            if saveConfig:
+                remote_conn.send("save config")
+                remote_conn.send("\n")
+                myOutput = self._wait_for_prompt(remote_conn, myLogFile, ")")
+                remote_conn.send("y")
+                remote_conn.send("\n")
+                myOutput = self._wait_for_prompt(remote_conn, myLogFile, ")")
+
+
+
+            # Logout
+            remote_conn.send("logout")
+            remote_conn.send("\n")
+            time.sleep(1)
+            myOutput = remote_conn.recv(65535)
+            myLogFile.write(myOutput)
+            myLogFile.flush()
+
+            # If asked to save config select No
+            if "(y/N)" in myOutput:
+                remote_conn.send("y")
+                remote_conn.send("\n")
+                time.sleep(1)
+
+            myOutput = remote_conn.recv(65535)
+            myLogFile.write(myOutput)
+            myLogFile.flush()
+            # Close connection
+            remote_conn.close()
+            myLogFile.close()
+        # Print exception and return -1
+        except IOError as error:
+            print("Invalid Hostname")
+            myLogFile.close()
+            return -1
+        except paramiko.PasswordRequiredException as error:
+            print("Invalid Username or password")
+            myLogFile.close()
+            return -2
+        except paramiko.AuthenticationException as error:
+            print("Invalid Username or password")
+            myLogFile.close()
+            return -2
+        except socket.timeout as error:
+            print("Connection timeout")
+            myLogFile.close()
+            return -1
+        except Exception, e:
+            print(str(e))
+            myLogFile.close()
+            return -1
+
+        # Return success
+        return 0
+
     def to_string(self):
+        '''
+
+        :return:
+        '''
         # Gather WLC Info
         returnString = self.name + "," + self.ipAddress + "," + self.model + "," + self.serialNumber + "," + self.softwareVersion \
         + "," + self.fus + "," + self.primaryBoot + "," + self.backupBoot + "," + self.activeBoot + "," + self.apNumber + "," \
@@ -518,7 +638,7 @@ def main(**kwargs):
     '''
 
     # Set logging
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG, format="%(asctime)s [%(levelname)8s]:  %(message)s")
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(asctime)s [%(levelname)8s]:  %(message)s")
 
     if kwargs:
         args = kwargs
@@ -540,24 +660,27 @@ def main(**kwargs):
     if not args.password:
         args.password = getpass.getpass()
 
-
+    # Create WLC and discover device
     sourceWLC = CiscoWLC(args.sourceWLCip.strip(), args.username, args.password)
-
+    logger.info("Starting Discovery for WLC {}".format(sourceWLC.ipAddress)
     sourceWLC.discover_device()
+    logger.info("Completed Discovery for WLC {}".format(sourceWLC.ipAddress)
 
+    # Create WLC and discover device
     destinationWLC = CiscoWLC(args.destinationWLCip.strip(), args.username, args.password)
-
+    logger.info("Starting Discovery for WLC {}".format(destinationWLC.ipAddress)
     destinationWLC.discover_device()
+    logger.info("Completed Discovery for WLC {}".format(destinationWLC.ipAddress)
 
+    # Build command list
+    logger.info("Building Command List for Sync".format(destinationWLC.ipAddress)
     commandList = find_ap_changes(sourceWLC.flexconnectGroups, destinationWLC.flexconnectGroups)
 
     for command in commandList:
         print(command + "\n")
 
+    # Return None
     return None
-
-
-
 
 
 if __name__ == '__main__':
