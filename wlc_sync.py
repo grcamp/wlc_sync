@@ -32,7 +32,7 @@
 #########################################################################
 
 # Import a whole bunch of classes, all shoul
-import sys,os,getpass,paramiko,time,datetime,socket,itertools,operator,random,argparse,logging
+import sys, os, getpass, paramiko, time, datetime, socket, itertools, operator, random, argparse, logging
 from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
 
@@ -41,20 +41,25 @@ logger = logging.getLogger(__name__)
 WORKER_COUNT = 25
 deviceCount = 0
 
+
 def warning(msg):
     logger.warning(msg)
 
+
 def error(msg):
     logger.error(msg)
+
 
 def fatal(msg):
     logger.fatal(msg)
     exit(1)
 
+
 # Global Constants and Variables
 logFilePostfix = "_wlc_upgrade.log"
 currentDevice = 0
 deviceCount = 0
+
 
 #########################################################################
 # Class CiscoAP
@@ -63,7 +68,7 @@ deviceCount = 0
 #    and parse SSH session data
 #########################################################################
 class CiscoAP:
-    def __init__(self, name, wlc, mac, model, softwareVersion = "", serialNumber = ""):
+    def __init__(self, name, wlc, mac, model, softwareVersion="", serialNumber=""):
         # Declare variables
         self.name = name
         self.wlc = wlc
@@ -75,7 +80,6 @@ class CiscoAP:
         self.certExpirationEpoch = 0
         self.aRadioStatus = ""
         self.bRadioStatus = ""
-
 
 
 #########################################################################
@@ -128,7 +132,7 @@ class CiscoWLC:
 
         # Change blocking mode to non-blocking
         remote_conn.setblocking(0)
-        
+
         # Wait timeout seconds total
         while i < timeout:
             time.sleep(1)
@@ -137,7 +141,7 @@ class CiscoWLC:
                 myOutput = remote_conn.recv(65535)
             except:
                 myOutput = ""
-            
+
             allOutput = allOutput + myOutput
 
             myLogFile.write(myOutput)
@@ -153,7 +157,7 @@ class CiscoWLC:
 
         # Return None
         return allOutput
-    
+
     def discover_device(self):
         '''
         :return:
@@ -164,7 +168,7 @@ class CiscoWLC:
             return -1
 
         # Open Log File
-        myLogFile = open(self.ipAddress + logFilePostfix,'a')
+        myLogFile = open(self.ipAddress + logFilePostfix, 'a')
         # Attempt to login to devices via SSH
         try:
             # Attempt Login
@@ -172,13 +176,14 @@ class CiscoWLC:
             # Bypass SSH Key accept policy
             remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             # Attempt to connection
-            remote_conn_pre.connect(self.ipAddress,username=self.username,password=self.password,look_for_keys=False,allow_agent=False)
+            remote_conn_pre.connect(self.ipAddress, username=self.username, password=self.password, look_for_keys=False,
+                                    allow_agent=False)
             # Log into WLC
             remote_conn = remote_conn_pre.invoke_shell()
             time.sleep(15)
             myOutput = remote_conn.recv(65535)
             myLogFile.write(myOutput)
-            
+
             # Check if user prompt appears
             if "User:" not in myOutput:
                 myLogFile.close()
@@ -197,18 +202,18 @@ class CiscoWLC:
             myOutput = remote_conn.recv(65535)
             myLogFile.write(myOutput)
             myLogFile.flush()
-            
+
             # Check if user prompt appears
             if ">" not in myOutput:
                 myLogFile.close()
                 remote_conn.close()
                 return -2
-            
+
             # Disable paging
             remote_conn.send("config paging disable")
             remote_conn.send("\n")
             myOutput = self._wait_for_prompt(remote_conn, myLogFile)
-                        
+
             # Find System Name, FUS, Software Version
             remote_conn.send("show sysinfo")
             remote_conn.send("\n")
@@ -225,7 +230,7 @@ class CiscoWLC:
             remote_conn.send("\n")
             myOutput = self._wait_for_prompt(remote_conn, myLogFile)
             self.model = split_string(myOutput.split("\n"), 'PID:', ' ', 1)
-            self.model = self.model.replace(',','')
+            self.model = self.model.replace(',', '')
             self.serialNumber = split_string(myOutput.split("\n"), 'PID:', ' ', 7)
             # Check certificate bypass config
             self._check_certificate_bypass(remote_conn, myLogFile)
@@ -241,7 +246,7 @@ class CiscoWLC:
             remote_conn.send("\n")
             myOutput = self._wait_for_prompt(remote_conn, myLogFile)
             self.apNumber = split_string(myOutput.split("\n"), 'Number of APs', ' ', 3)
-            #self._build_ap_list(myOutput, remote_conn, myLogFile)
+            # self._build_ap_list(myOutput, remote_conn, myLogFile)
             # Gather run-config commands
             remote_conn.send("show run-config commands")
             remote_conn.send("\n")
@@ -266,7 +271,7 @@ class CiscoWLC:
                 remote_conn.send("N")
                 remote_conn.send("\n")
                 time.sleep(1)
-            
+
             myOutput = remote_conn.recv(65535)
             myLogFile.write(myOutput)
             myLogFile.flush()
@@ -371,7 +376,7 @@ class CiscoWLC:
         # Search output for APs and build list
         for line in lines:
             if "-K9" in line:
-                myAP = CiscoAP(line.split()[0],self.name,line.split()[3],line.split()[2],self.softwareVersion)
+                myAP = CiscoAP(line.split()[0], self.name, line.split()[3], line.split()[2], self.softwareVersion)
                 self.apList.append(myAP)
 
         # For each ap in the list find the serial number and software version
@@ -402,7 +407,6 @@ class CiscoWLC:
                 ap.bRadioStatus = "UP"
             else:
                 ap.bRadioStatus = "DOWN"
-
 
         # Sort the list and find the first ap certificate expiration date, then sort by name
         if len(self.apList) > 0:
@@ -515,8 +519,6 @@ class CiscoWLC:
                 remote_conn.send("\n")
                 myOutput = self._wait_for_prompt(remote_conn, myLogFile, ")")
 
-
-
             # Logout
             remote_conn.send("logout")
             remote_conn.send("\n")
@@ -569,12 +571,13 @@ class CiscoWLC:
         '''
         # Gather WLC Info
         returnString = self.name + "," + self.ipAddress + "," + self.model + "," + self.serialNumber + "," + self.softwareVersion \
-        + "," + self.fus + "," + self.primaryBoot + "," + self.backupBoot + "," + self.activeBoot + "," + self.apNumber + "," \
-        + self.wlanNumber + "," + self.authenticatedClients + "," + self.firstApCertExpirationDate
+                       + "," + self.fus + "," + self.primaryBoot + "," + self.backupBoot + "," + self.activeBoot + "," + self.apNumber + "," \
+                       + self.wlanNumber + "," + self.authenticatedClients + "," + self.firstApCertExpirationDate
 
         # Return string value
         return returnString
-    
+
+
 def index_containing_substring(the_list, substring):
     '''
     :param the_list:
@@ -588,6 +591,7 @@ def index_containing_substring(the_list, substring):
             return i
     # Return -1 if substring is not found in the_list
     return -1
+
 
 def split_string(the_list, sub_string, delimiter, string_index):
     '''
@@ -605,6 +609,7 @@ def split_string(the_list, sub_string, delimiter, string_index):
         returnVal = the_list[listVal].split(delimiter)[string_index]
         returnVal = returnVal.strip()
     return returnVal
+
 
 def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
     # Create list of commands to run
@@ -630,6 +635,7 @@ def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
 
     # Return commandList
     return commandList
+
 
 def main(**kwargs):
     '''
@@ -662,22 +668,24 @@ def main(**kwargs):
 
     # Create WLC and discover device
     sourceWLC = CiscoWLC(args.sourceWLCip.strip(), args.username, args.password)
-    logger.info("Starting Discovery for WLC {}".format(sourceWLC.ipAddress)
+    logger.info("Starting Discovery for WLC {}".format(sourceWLC.ipAddress))
     sourceWLC.discover_device()
-    logger.info("Completed Discovery for WLC {}".format(sourceWLC.ipAddress)
+    logger.info("Completed Discovery for WLC {}".format(sourceWLC.ipAddress))
 
     # Create WLC and discover device
     destinationWLC = CiscoWLC(args.destinationWLCip.strip(), args.username, args.password)
-    logger.info("Starting Discovery for WLC {}".format(destinationWLC.ipAddress)
+    logger.info("Starting Discovery for WLC {}".format(destinationWLC.ipAddress))
     destinationWLC.discover_device()
-    logger.info("Completed Discovery for WLC {}".format(destinationWLC.ipAddress)
+    logger.info("Completed Discovery for WLC {}".format(destinationWLC.ipAddress))
 
     # Build command list
-    logger.info("Building Command List for Sync".format(destinationWLC.ipAddress)
+    logger.info("Building Command List for Sync")
     commandList = find_ap_changes(sourceWLC.flexconnectGroups, destinationWLC.flexconnectGroups)
+    logger.info("Completed Command List for Sync")
+
 
     for command in commandList:
-        print(command + "\n")
+        print(command)
 
     # Return None
     return None
