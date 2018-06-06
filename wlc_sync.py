@@ -613,7 +613,7 @@ def split_string(the_list, sub_string, delimiter, string_index):
 
 def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
     # Create list of commands to run
-    commandList = []
+    commands = []
 
     # Search through each source group
     for group in sourceFlexGroups:
@@ -622,7 +622,7 @@ def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
             if group['name'] == dGroup['name']:
                 for ap in group['ap_macs']:
                     if any(ap == s for s in dGroup['ap_macs']) == False:
-                        commandList.append("config flexconnect group {} ap add {}".format(group['name'], ap))
+                        commands.append("config flexconnect group {} ap add {}".format(group['name'], ap))
 
     # Search through each destination group
     for group in destinationFlexGroups:
@@ -631,10 +631,10 @@ def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
             if group['name'] == sGroup['name']:
                 for ap in group['ap_macs']:
                     if any(ap == s for s in sGroup['ap_macs']) == False:
-                        commandList.append("config flexconnect group {} ap delete {}".format(group['name'], ap))
+                        commands.append("config flexconnect group {} ap delete {}".format(group['name'], ap))
 
     # Return commandList
-    return commandList
+    return commands
 
 
 def main(**kwargs):
@@ -680,12 +680,17 @@ def main(**kwargs):
 
     # Build command list
     logger.info("Building Command List for Sync")
-    commandList = find_ap_changes(sourceWLC.flexconnectGroups, destinationWLC.flexconnectGroups)
+    commands = find_ap_changes(sourceWLC.flexconnectGroups, destinationWLC.flexconnectGroups)
     logger.info("Completed Command List for Sync")
 
 
-    for command in commandList:
+    for command in commands:
         print(command)
+
+    # Sync Config
+    logger.info("Starting WLC Config Push to {}".format(destinationWLC.ipAddress))
+    destinationWLC.run_commands(commands)
+    logger.info("Completed WLC Config Push to {}".format(destinationWLC.ipAddress))
 
     # Return None
     return None
