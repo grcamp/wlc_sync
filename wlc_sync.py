@@ -497,7 +497,7 @@ def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
             if group['name'] == dGroup['name']:
                 for ap in group['ap_macs']:
                     if any(ap == s for s in dGroup['ap_macs']) == False:
-                        commandList.append("flexconnect group {} ap add {}".format(group['name'], ap))
+                        commandList.append("config flexconnect group {} ap add {}".format(group['name'], ap))
 
     # Search through each destination group
     for group in destinationFlexGroups:
@@ -506,7 +506,7 @@ def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
             if group['name'] == sGroup['name']:
                 for ap in group['ap_macs']:
                     if any(ap == s for s in dGroup['ap_macs']) == False:
-                        commandList.append("flexconnect group {} ap remove {}".format(group['name'], ap))
+                        commandList.append("config flexconnect group {} ap delete {}".format(group['name'], ap))
 
     # Return commandList
     return commandList
@@ -550,6 +550,9 @@ def main(**kwargs):
     destinationWLC.discover_device()
 
     commandList = find_ap_changes(sourceWLC.flexconnectGroups, destinationWLC.flexconnectGroups)
+
+    for command in commandList:
+        print(command + "\n")
 
     return None
 
