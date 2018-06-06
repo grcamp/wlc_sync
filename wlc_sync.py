@@ -252,6 +252,8 @@ class CiscoWLC:
             remote_conn.send("\n")
             myOutput = self._wait_for_prompt(remote_conn, myLogFile)
             self.runConfigCommands = myOutput
+            # Build list of flex-connect APs
+            self._build_flexconnect_group_list()
             # Enable config paging
             remote_conn.send("config paging enable")
             remote_conn.send("\n")
@@ -424,7 +426,17 @@ class CiscoWLC:
         lines = self.runConfigCommands.split('\n')
 
         # Check each line for flex-connect config
-        #for line in flex
+        for line in lines:
+            if line.strip().startswith("flexconnect group") and line.strip().endswith("add"):
+                self.flexconnectGroups.append({'name': line.strip().split()[2],
+                                               'ap_macs': []})
+            elif line.strip().startswith("flexconnect group") and " ap add " in line.strip():
+                for group in self.flexconnectGroups:
+                    if line.strip().split()[2] == group['name']:
+                        group['ap_macs'].append(line.strip().split()[5])
+
+        # Return None
+        return None
 
     # Method to_string
     #
