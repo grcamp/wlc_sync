@@ -529,7 +529,7 @@ class CiscoWLC:
 
             # If asked to save config select No
             if "(y/N)" in myOutput:
-                remote_conn.send("y")
+                remote_conn.send("N")
                 remote_conn.send("\n")
                 time.sleep(1)
 
@@ -689,7 +689,7 @@ def main(**kwargs):
 
     # Sync Config
     logger.info("Starting WLC Config Push to {}".format(destinationWLC.ipAddress))
-    destinationWLC.run_commands(commands)
+    destinationWLC.run_commands(commands, True)
     logger.info("Completed WLC Config Push to {}".format(destinationWLC.ipAddress))
 
     # Return None
