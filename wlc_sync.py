@@ -490,7 +490,7 @@ def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
     # Create list of commands to run
     commandList = []
 
-    # Search through each
+    # Search through each source group
     for group in sourceFlexGroups:
         # Check if group exists in destination
         for dGroup in destinationFlexGroups:
@@ -498,6 +498,15 @@ def find_ap_changes(sourceFlexGroups, destinationFlexGroups):
                 for ap in group['ap_macs']:
                     if any(ap == s for s in dGroup['ap_macs']) == False:
                         commandList.append("flexconnect group {} ap add {}".format(group['name'], ap))
+
+    # Search through each destination group
+    for group in destinationFlexGroups:
+        # Check if group exists in source
+        for sGroup in sourceFlexGroups:
+            if group['name'] == sGroup['name']:
+                for ap in group['ap_macs']:
+                    if any(ap == s for s in dGroup['ap_macs']) == False:
+                        commandList.append("flexconnect group {} ap remove {}".format(group['name'], ap))
 
     # Return commandList
     return commandList
