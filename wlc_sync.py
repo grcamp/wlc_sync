@@ -441,7 +441,7 @@ class CiscoWLC:
         # Return None
         return None
 
-    def run_commands(self, commmands, saveConfig=False):
+    def run_commands(self, commands, saveConfig=False):
         '''
 
         :param commmands:
@@ -517,7 +517,7 @@ class CiscoWLC:
                 myOutput = self._wait_for_prompt(remote_conn, myLogFile, ")")
                 remote_conn.send("y")
                 remote_conn.send("\n")
-                myOutput = self._wait_for_prompt(remote_conn, myLogFile, ")")
+                myOutput = self._wait_for_prompt(remote_conn, myLogFile)
 
             # Logout
             remote_conn.send("logout")
