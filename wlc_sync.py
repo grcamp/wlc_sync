@@ -2,7 +2,7 @@
 #########################################################################
 # Gregory Camp
 # grcamp@cisco.com
-# wlc_upgrade.py has multiple functions required to upgrade legacy
+# wlc_sync.py has multiple functions required to upgrade legacy
 #    wireless LAN controllers to the correct destination codes.
 #
 # Testing Summary:
@@ -13,8 +13,8 @@
 # Supported Methods:
 #    1.  Discover AP and WLC info
 #    2.  Download Software
-#    3.    Run pre-upgrade checks and upgrade
-#    4.  Run post 7.0.252.0 upgrade configs (enable lifetime-check bypass and set clock)
+#    3.  Run pre-upgrade checks and upgrade
+#    4.  Run post 7.0.252.0 upgrade configs
 #    5.  Run post checks
 #
 # Planned Future Work:
@@ -31,10 +31,8 @@
 #    Different Per Method
 #########################################################################
 
-# Import a whole bunch of classes, all shoul
-import sys, os, getpass, paramiko, time, datetime, socket, itertools, operator, random, argparse, logging
-from multiprocessing.dummy import Pool as ThreadPool
-from functools import partial
+# Import a whole bunch of classes
+import sys, os, getpass, paramiko, time, socket, operator, argparse, logging
 
 # Declare global variables
 logger = logging.getLogger(__name__)
@@ -138,7 +136,7 @@ class CiscoWLC:
             time.sleep(1)
 
             try:
-                myOutput = remote_conn.recv(65535)
+                myOutput = remote_conn.recv(65535000)
             except:
                 myOutput = ""
 
@@ -517,7 +515,7 @@ class CiscoWLC:
                 myOutput = self._wait_for_prompt(remote_conn, myLogFile, ")")
                 remote_conn.send("y")
                 remote_conn.send("\n")
-                myOutput = self._wait_for_prompt(remote_conn, myLogFile)
+                myOutput = self._wait_for_prompt(remote_conn, myLogFile, timeout=60)
 
             # Logout
             remote_conn.send("logout")
@@ -682,7 +680,6 @@ def main(**kwargs):
     logger.info("Building Command List for Sync")
     commands = find_ap_changes(sourceWLC.flexconnectGroups, destinationWLC.flexconnectGroups)
     logger.info("Completed Command List for Sync")
-
 
     for command in commands:
         print(command)
