@@ -2,30 +2,20 @@
 #########################################################################
 # Gregory Camp
 # grcamp@cisco.com
-# wlc_sync.py has multiple functions required to upgrade legacy
-#    wireless LAN controllers to the correct destination codes.
+# wlc_sync.py has multiple functions
 #
 # Testing Summary:
-#    Primarily tested with NM-AIR-WLC8-K9 modules running 4.2.207.0, but
-#    all WLCs should work.  Used python 2.7 with cygwin running the built-in
-#    paramiko module.
+#    Tested on 8540 controllers running 8.5.120.0, but all WLCs should work.
 #    
 # Supported Methods:
-#    1.  Discover AP and WLC info
-#    2.  Download Software
-#    3.  Run pre-upgrade checks and upgrade
-#    4.  Run post 7.0.252.0 upgrade configs
-#    5.  Run post checks
+#    1.  Sync Flexconnect configus
 #
 # Planned Future Work:
-#    1.  Support TFTP download Method
-#    2.  Support completed automated deployment with command line arguments
-#    3.  Documentation (This needs a lot of commenting)
+#    1.
 #
 # Global Variables:
-#    logFile = postfix for dumping commands and raw output from WLCs
-#    currentDevice = for tracking multithreading method execution
-#    deviceCount = for tracking multithreading method execution
+#    logFilePostfix = postfix for dumping commands and raw output from WLCs
+#    logger = logging for device
 #
 # User Input
 #    Different Per Method
@@ -36,9 +26,6 @@ import sys, os, getpass, paramiko, time, socket, operator, argparse, logging
 
 # Declare global variables
 logger = logging.getLogger(__name__)
-WORKER_COUNT = 25
-deviceCount = 0
-
 
 def warning(msg):
     logger.warning(msg)
@@ -54,9 +41,7 @@ def fatal(msg):
 
 
 # Global Constants and Variables
-logFilePostfix = "_wlc_upgrade.log"
-currentDevice = 0
-deviceCount = 0
+logFilePostfix = "_wlc_sync.log"
 
 
 #########################################################################
